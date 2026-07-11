@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "comfyui-easy-llm-prompt"
+version = "1.0.0"
+description = "Convert a structured scene description into an optimised SDXL prompt via LLM"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "ComfyUI-EasyLLMPrompt Contributors"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["easy_llm_prompt*"]
