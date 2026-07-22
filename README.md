@@ -21,12 +21,11 @@ A ComfyUI custom node that converts a **structured scene description** into a si
 
 ## Installation
 
-Clone the repository into your ComfyUI `custom_nodes` directory:
-
-```bash
-cd ComfyUI/custom_nodes
-git clone https://github.com/akumaburn/ComfyUI-EasyLLMPrompt.git
-```
+| Method | Command |
+|--------|---------|
+| **ComfyUI Manager** | Search for "Easy LLM Prompt" in the Manager |
+| **Comfy Registry**  | `comfy node install easy-llm-prompt` |
+| **Manual**          | `git clone https://github.com/akumaburn/ComfyUI-EasyLLMPrompt.git` |
 
 Restart ComfyUI. The node appears in the **prompt** category (right‑click → *Add Node* → *prompt* → *Easy LLM Prompt*).
 
