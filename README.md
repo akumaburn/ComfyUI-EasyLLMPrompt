@@ -11,6 +11,7 @@ A ComfyUI custom node that converts a **structured scene description** into a si
 ## Features
 
 * **Simple UI** – Five text fields and a few optional settings.
+* **Before/After Shell Hooks** – Run arbitrary bash commands before or after the node executes (blocking).
 * **Multiple backends** – Ollama, llama.cpp server, OpenAI-compatible (vLLM, LM Studio, LocalAI, etc.).
 * **Persistent config** – Backend, URL, model, temperature, and other settings are saved across ComfyUI sessions.
 * **Fast** – LRU cache deduplicates identical requests; configurable timeout prevents blocking.
@@ -43,7 +44,8 @@ Restart ComfyUI. The node appears in the **prompt** category (right‑click → 
    - **Action** – what is happening? (e.g. *reading a book under a tree*)
    - **Notes** – style guidance or extra context (e.g. *Studio Ghibli style*)
 3. Optionally expand the **optional** section to configure the LLM backend.
-4. Connect the **enhanced_prompt** output to your SDXL checkpoint/text encoder.
+4. **Shell Hooks** (optional) — see [Shell Hooks](#shell-hooks) below.
+5. Connect the **enhanced_prompt** output to your SDXL checkpoint/text encoder.
 
 ### Example
 
@@ -89,6 +91,33 @@ a majestic white wolf with heterochromatic eyes, detailed fur texture, howling a
 ### vLLM / LocalAI / other OpenAI-compatible
 
 Start your server, then use the **OpenAI Compatible** backend with the correct base URL.
+
+---
+
+## Shell Hooks
+
+The **Before-Run (Shell)** and **After-Run (Shell)** optional fields let you execute arbitrary bash commands before or after the node's main logic runs. Execution is **blocking** — the node waits for the command to finish before proceeding.
+
+### Use cases
+
+- **Start/stop a server** — launch an LLM backend, wait for it to be ready, then run the node.
+- **Pre-processing** — download a model, prepare input data, or reset state.
+- **Post-processing** — save results, send notifications, or clean up resources.
+
+### Notes
+
+- The command is written to a temporary file and executed with `bash`, not `/bin/sh`.
+- Background processes (via `&`) are supported — the foreground script still blocks.
+- Exit codes are **not** enforced (non-zero exits do not crash the node).
+- The temp script is deleted after execution.
+
+### Example
+
+```bash
+pkill -f llama-server 2>/dev/null
+(cd /path/to/backend && ./gradlew quarkusDev --console=plain) &
+sleep 10
+```
 
 ---
 
