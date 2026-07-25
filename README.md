@@ -12,7 +12,9 @@ A ComfyUI custom node that converts a **structured scene description** into a si
 ## Features
 
 * **Simple UI** – Five text fields and a few optional settings.
+* **Two modes** – *Prompt Mode* (SDXL prompt compilation) and *Raw Mode* (send arbitrary text to the LLM).
 * **Before/After Shell Hooks** – Run arbitrary bash commands before or after the node executes (blocking).
+* **Shell Input** – Pass text content to shell hooks via the `$input` variable.
 * **Multiple backends** – Ollama, llama.cpp server, OpenAI-compatible (vLLM, LM Studio, LocalAI, etc.).
 * **Persistent config** – Backend, URL, model, temperature, and other settings are saved across ComfyUI sessions.
 * **Fast** – LRU cache deduplicates identical requests; configurable timeout prevents blocking.
@@ -45,8 +47,9 @@ Restart ComfyUI. The node appears in the **prompt** category (right‑click → 
    - **Action** – what is happening? (e.g. *reading a book under a tree*)
    - **Notes** – style guidance or extra context (e.g. *Studio Ghibli style*)
 3. Optionally expand the **optional** section to configure the LLM backend.
-4. **Shell Hooks** (optional) — see [Shell Hooks](#shell-hooks) below.
-5. Connect the **enhanced_prompt** output to your SDXL checkpoint/text encoder.
+4. Switch between **Prompt Mode** and **Raw Mode** using the *Mode* dropdown in the optional section.
+5. **Shell Hooks** (optional) — see [Shell Hooks](#shell-hooks) below.
+6. Connect the **enhanced_prompt** output to your SDXL checkpoint/text encoder.
 
 ### Example
 
@@ -62,6 +65,22 @@ The LLM might produce:
 ```
 a majestic white wolf with heterochromatic eyes, detailed fur texture, howling at the sky, frozen tundra under the aurora borealis at night, cinematic lighting, northern lights in the background, photorealistic, award-winning photography, 8K, sharp focus
 ```
+
+---
+
+## Raw Mode
+
+By default the node runs in **Prompt Mode**, which composes your scene fields (Subject, Place, Time, Action, Notes) into an SDXL-optimised prompt using the LLM.
+
+Switch to **Raw Mode** (optional → *Mode* → `raw`) to bypass the prompt compiler and send **any text you want** directly to the LLM:
+
+| Field | Raw Mode behaviour |
+|-------|--------------------|
+| **System Prompt** | Sent directly to the LLM as the system message |
+| **User Message** *(new)* | Sent directly to the LLM as the user message |
+| Subject / Place / Time / Action / Notes | Ignored |
+
+Use this when you need the LLM's raw output for tasks other than prompt generation — summarisation, translation, classification, etc.
 
 ---
 
@@ -104,13 +123,29 @@ The **Before-Run (Shell)** and **After-Run (Shell)** optional fields let you exe
 - **Start/stop a server** — launch an LLM backend, wait for it to be ready, then run the node.
 - **Pre-processing** — download a model, prepare input data, or reset state.
 - **Post-processing** — save results, send notifications, or clean up resources.
+- **Pass dynamic input** — use the **Shell Input** field to pass text content to your shell commands.
+
+### Shell Input (`$input`)
+
+The **Shell Input** optional field exposes its content to both shell hooks via the `$input` bash variable, which points to a temporary file containing the text. If the field is empty, `$input` is not set.
+
+```bash
+# Example: use the shell input as a prompt for another tool
+cat "$input" | some-command
+
+# Or pass it inline
+text=$(cat "$input")
+echo "$text"
+```
+
+You can connect an upstream node's output to **Shell Input** to chain data through your workflow, or type directly into the field.
 
 ### Notes
 
 - The command is written to a temporary file and executed with `bash`, not `/bin/sh`.
 - Background processes (via `&`) are supported — the foreground script still blocks.
 - Exit codes are **not** enforced (non-zero exits do not crash the node).
-- The temp script is deleted after execution.
+- The temp script and input file are deleted after execution.
 
 ### Example
 
@@ -192,7 +227,7 @@ ComfyUI-EasyLLMPrompt/
 ├── .gitignore
 └── easy_llm_prompt/
     ├── __init__.py          # Package version
-    ├── node.py              # EasyLLMPromptNode class
+    ├── node.py              # EasyLLMPromptNode class (Prompt Mode, Raw Mode, Shell Hooks)
     ├── llm_backends.py      # LLM provider implementations
     ├── prompt_builder.py    # System prompt & user message assembly
     ├── cache.py             # LRU request cache

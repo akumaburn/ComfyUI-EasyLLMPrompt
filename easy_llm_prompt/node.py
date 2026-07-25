@@ -5,6 +5,7 @@ Action, Notes) into an optimised SDXL positive prompt via an LLM.
 """
 
 import os
+import shlex
 import subprocess
 import tempfile
 import time as _time
@@ -21,18 +22,32 @@ logger = logging.getLogger(__name__)
 _cache = PromptCache(max_size=100)
 
 
-def _run_shell(cmd):
+def _run_shell(cmd, input_text=""):
     """Execute *cmd* as a bash script via a temp file (blocking).
 
     Using a temp file avoids the ``pkill -f`` problem: when a command is
     passed inline to ``/bin/sh -c <cmd>``, the pattern being grepped
     (e.g. ``llama-server``) appears in the shell's argv, so ``pkill -f``
     kills the shell itself.  Writing the script to a file keeps argv clean.
+
+    If *input_text* is non-empty, its content is written to a temp file and
+    the bash variable ``input`` is set to that path so shell commands can
+    reference ``$input`` (e.g. ``cat "$input"``).
     """
+    input_path = None
+    if input_text.strip():
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", prefix="easy_llm_input_", delete=False,
+        ) as f:
+            f.write(input_text)
+            input_path = f.name
+
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".sh", prefix="easy_llm_", delete=False,
     ) as f:
         f.write("#!/usr/bin/env bash\n")
+        if input_path is not None:
+            f.write(f"input={shlex.quote(input_path)}\n")
         f.write(cmd)
         f.write("\n")
         script_path = f.name
@@ -44,6 +59,11 @@ def _run_shell(cmd):
             os.unlink(script_path)
         except OSError:
             pass
+        if input_path is not None:
+            try:
+                os.unlink(input_path)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +81,10 @@ class EasyLLMPromptNode:
     ------------
     **Subject** / **Place** / **Time** / **Action** / **Notes**
         Multiline text fields.  Fill in as many or as few as you need.
+
+    **Mode**
+        *Prompt Mode* (default): composes a structured SDXL prompt.
+        *Raw Mode*: sends ``user_message`` directly to the LLM.
 
     **System Prompt** *(optional)*
         Override the built-in SDXL prompt-compiler instructions.
@@ -107,6 +131,14 @@ class EasyLLMPromptNode:
                 }),
             },
             "optional": {
+                "mode": (["sdxl_prompt", "raw"], {
+                    "default": "sdxl_prompt",
+                }),
+                "user_message": ("STRING", {
+                    "multiline": True,
+                    "default": "",
+                    "placeholder": "Send this text directly to the LLM (used in Raw Mode)",
+                }),
                 "system_prompt": ("STRING", {
                     "multiline": True,
                     "default": "",
@@ -142,6 +174,11 @@ class EasyLLMPromptNode:
                     "step": 1,
                     "tooltip": "-1 = random, any other value = deterministic",
                 }),
+                "shell_input": ("STRING", {
+                    "multiline": True,
+                    "default": "",
+                    "placeholder": "Content accessible as $input in shell hooks",
+                }),
                 "before_run_shell": ("STRING", {
                     "multiline": True,
                     "default": "",
@@ -169,16 +206,21 @@ class EasyLLMPromptNode:
                         notes="", system_prompt="", backend="ollama",
                         base_url="", model="", temperature=0.7,
                         max_tokens=512, seed=-1,
-                        before_run_shell="", after_run_shell=""):
+                        before_run_shell="", after_run_shell="",
+                        mode="sdxl_prompt", user_message="", shell_input=""):
         """Execute the node: build prompts, call the LLM, return result."""
         start = _time.time()
 
         if before_run_shell.strip():
-            _run_shell(before_run_shell)
+            _run_shell(before_run_shell, shell_input)
 
         try:
-            sys_prompt = build_system_prompt(system_prompt)
-            user_msg = build_user_message(subject, place, time, action, notes)
+            if mode == "raw":
+                sys_prompt = system_prompt or ""
+                user_msg = user_message or ""
+            else:
+                sys_prompt = build_system_prompt(system_prompt)
+                user_msg = build_user_message(subject, place, time, action, notes)
             cache_seed = seed if seed >= 0 else None
 
             # ----- cache lookup -------------------------------------------------
@@ -239,7 +281,7 @@ class EasyLLMPromptNode:
                 return (err, f"Error: {err}")
         finally:
             if after_run_shell.strip():
-                _run_shell(after_run_shell)
+                _run_shell(after_run_shell, shell_input)
 
     # ------------------------------------------------------------------
     # Caching hint for ComfyUI
@@ -250,7 +292,9 @@ class EasyLLMPromptNode:
                    notes="", system_prompt="", backend="ollama",
                    base_url="", model="", temperature=0.7,
                    max_tokens=512, seed=-1,
-                   before_run_shell="", after_run_shell="", **kwargs):
+                   before_run_shell="", after_run_shell="",
+                   mode="sdxl_prompt", user_message="", shell_input="",
+                   **kwargs):
         """Control ComfyUI's workflow caching.
 
         * Random seed (``-1``): always re-execute (returns NaN).
@@ -264,4 +308,5 @@ class EasyLLMPromptNode:
             system_prompt, backend, base_url, model,
             temperature, max_tokens, seed,
             before_run_shell, after_run_shell,
+            mode, user_message, shell_input,
         ))
