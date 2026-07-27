@@ -106,12 +106,16 @@ def strip_llm_noise(text):
 
     # Common preamble / explanation phrases
     prefixes = [
-        "Here is", "Here's", "Sure,", "Sure thing", "Certainly,",
+        "Here is", "Here's", "Here are", "Sure,", "Sure thing", "Certainly,",
         "Of course,", "Enhanced prompt:", "Prompt:", "Result:",
+        "I'll", "I will", "Let me",
     ]
     for prefix in prefixes:
         if text.lower().startswith(prefix.lower()):
             text = text[len(prefix):].strip()
+
+    # Strip markdown headers
+    text = re.sub(r'^#{1,6}\s+.*$', '', text, flags=re.MULTILINE).strip()
 
     # Code-fence markers the LLM might wrap around the prompt
     if text.startswith("```") and text.endswith("```"):
@@ -120,5 +124,27 @@ def strip_llm_noise(text):
     # Inline code markers
     if text.startswith("`") and text.endswith("`"):
         text = text[1:-1].strip()
+
+    # Multi-line preamble: if we still have multiple lines, pick the first
+    # line that looks like a comma-separated tag list (lowercase start,
+    # contains a comma).
+    if '\n' in text:
+        lines = text.strip().split('\n')
+        candidates = []
+        for line in lines:
+            l = line.strip()
+            if not l:
+                continue
+            # Skip option headers ("Option 1:", "**Option 1:**")
+            if re.match(r'^(?:\*\*)?option\s+\d+\s*:', l, re.IGNORECASE):
+                continue
+            # Skip bold/italic headers
+            if re.match(r'^\*{1,2}\w', l):
+                continue
+            candidates.append(l)
+        if candidates:
+            # Prefer a line that has commas (tag list), fall back to first
+            tagged = [c for c in candidates if ',' in c]
+            text = (max(tagged, key=len) if tagged else candidates[0])
 
     return text.strip()
