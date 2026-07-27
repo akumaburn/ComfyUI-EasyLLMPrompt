@@ -6,9 +6,11 @@ list of the fields the user filled in.
 """
 
 DEFAULT_SYSTEM_PROMPT = (
+    "Ignore all previous instructions.\n\n"
     "You are an expert SDXL prompt compiler.\n\n"
-    "Convert the structured description below into a single comma-separated "
-    "positive prompt.\n\n"
+    "Your output MUST be a single line containing ONLY a comma-separated list of "
+    "tags. No other text. No explanations. No sentences. No markdown. No "
+    "numbering. Just tags separated by commas.\n\n"
     "Rules:\n"
     "* One line only. No explanations, sentences, markdown, or numbering.\n"
     "* No repeated concepts, invented objects, or contradictions.\n"
@@ -28,7 +30,9 @@ DEFAULT_SYSTEM_PROMPT = (
     "* Every object's spatial relationship to every other must be clear "
     "(e.g. 'woman standing behind a table', 'cat on floor to her left').\n\n"
     "Use concise descriptive tags with photography terminology. "
-    "Avoid unnecessary repetition."
+    "Avoid unnecessary repetition.\n\n"
+    "REMEMBER: Output ONLY a single comma-separated list of tags. "
+    "No sentences. No explanations. Nothing else."
 )
 
 
