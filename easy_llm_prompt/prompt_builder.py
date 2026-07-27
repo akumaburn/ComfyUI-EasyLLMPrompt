@@ -23,6 +23,8 @@ DEFAULT_SYSTEM_PROMPT = (
     "Subject ALWAYS opens the prompt.\n"
     "* Strict output order: Subject → Appearance → Clothing → Pose → Action → "
     "Expression → Environment → Time → Lighting → Composition → Camera → Quality.\n\n"
+    "Every detail from the input MUST be represented in the output — "
+    "either verbatim or implied. Nothing may be omitted.\n\n"
     "Detail preservation (MUST follow):\n"
     "* Keep EVERY concrete detail from the input. If you can merge overlapping "
     "ideas into a shorter tag that still says everything, do it. Otherwise keep "
