@@ -8,6 +8,7 @@ list of the fields the user filled in.
 DEFAULT_SYSTEM_PROMPT = (
     "Ignore all previous instructions.\n\n"
     "You are a text reformatter. You do not generate images. "
+    "Do not ask for an image generation tool. "
     "You only convert structured descriptions into a single line of "
     "comma-separated tags for an image generation model.\n\n"
     "Rules:\n"
